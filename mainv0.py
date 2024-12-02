@@ -168,4 +168,4 @@ if __name__ == "__main__":
         plt.show()
 
     else:
-        print("Choix invalide. Veuillez exécuter à nouveau et entrer un choix valide.")
+        print("Choix invalide. Veuillez exécuter à nouveau et entrer un choix valide")
