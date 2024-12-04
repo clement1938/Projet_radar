@@ -42,7 +42,7 @@ def compute_wCBF(params):
 
     # On commence par calculer le vecteur directeur a(theta_s)
     k = 2 * np.pi / Lambda 
-    a_theta_s = np.exp(1j * k * d * np.arange(N) * np.sin(theta_s))
+    a_theta_s = np.exp(-1j * k * d * np.arange(N) * np.sin(theta_s))
     
     # Et puis calcul de wCBF (normalisation)
     wCBF = a_theta_s / np.linalg.norm(a_theta_s)
@@ -96,13 +96,14 @@ def compute_wopt(params, C):
 
     # On calcule d'abord a(theta_s)
     k = 2 * np.pi / Lambda  
-    a_theta_s = np.exp(1j * k * d * np.arange(N) * np.sin(theta_s))
+    a_theta_s = np.exp(-1j * k * d * np.arange(N) * np.sin(theta_s))
 
     # Et puis wopt
     C_inv = np.linalg.inv(C)  # On inverse la matrice C
     num = np.dot(C_inv, a_theta_s)
     den = np.dot(np.conj(a_theta_s).T, num)
     wopt = num / den
+
 
     return wopt
 
@@ -120,7 +121,7 @@ def compute_covariance_matrix(params):
 
     # On calcule le vecteur directeur a(theta_I)
     k = 2 * np.pi / Lambda 
-    a_theta_I = np.exp(1j * k * d * np.arange(N) * np.sin(theta_I))
+    a_theta_I = np.exp(-1j * k * d * np.arange(N) * np.sin(theta_I))
 
     # Et on fait la matrice C
     C = sigma**2 * np.eye(N) + PI * np.outer(a_theta_I, np.conj(a_theta_I).T)
@@ -148,7 +149,7 @@ def compute_SINR(params, w, C, theta_range):
     for theta in theta_range:
         # On commence par calculer le vecteur directeur a(theta)
         k = 2 * np.pi / Lambda
-        a_theta = np.exp(1j * k * d * np.arange(N) * np.sin(theta))
+        a_theta = np.exp(-1j * k * d * np.arange(N) * np.sin(theta))
 
         # Et donc pour chaque angle, on calcule le SINR
         numerator = Ps * np.abs(np.dot(np.conj(w).T, a_theta))**2
@@ -156,21 +157,85 @@ def compute_SINR(params, w, C, theta_range):
         SINR.append(numerator / denominator)
 
     # On doit convertir en échelle logarithmique (dB) pour le traçage
-    SINR_log = 10 * np.log10(SINR)
+    SINR_log = 10 * np.log10(np.abs(SINR))
     
     return SINR_log
 
-def plot_SINR(theta_range, SINR_log):
+def compute_SINR_2(params, w, C, a_theta_s):  
     """
-    Ici, on trace simplement le SINR en fonction de theta en échelle logarithmique !
-    Le faire dans une fonction séparé nous parait quand même plus clair
+    Ce code calcule le SINR pour un des filtres donnés, c'est une fonction beaucoup plus générale
+
+    Arguments :
+        params 
+        w (array) : Filtre de beamforming (MVDR ou MPDR par exemple)
+        C (array) : Matrice de covariance (interférences + bruit)
+        a_theta_s (array) : Vecteur directeur a(\theta_s)
+
+    Sortie : SINR (float) 
+    """
+    
+    Ps = params["Ps"]    # Puissance du signal utile
+
+    numerator = Ps * np.abs(np.dot(np.conj(w).T, a_theta_s))**2
+    denominator = np.dot(np.conj(w).T, np.dot(C, w))   # Puissance des interférences et du bruit
+    SINR = numerator / denominator
+    
+    return SINR
+
+
+def plot_SINR(theta_range, SINR1_log=None, SINR2_log=None, SINR3_log=None, SINR4_log=None):
+    """
+    La fonction qui permet de tracer le SINR en fonction de θ en échelle logarithmique
 
     """
     plt.figure(figsize=(10, 6))
-    plt.plot(np.rad2deg(theta_range), SINR_log, label="SINR (dB)", color="blue")
+
+    if SINR1_log is not None:
+        plt.plot(np.rad2deg(theta_range), SINR1_log, label="SINR 1", color="cyan", linestyle="-")
+    if SINR2_log is not None:
+        plt.plot(np.rad2deg(theta_range), SINR2_log, label="SINR 2", color="red", linestyle="--")
+    if SINR3_log is not None:
+        plt.plot(np.rad2deg(theta_range), SINR3_log, label="SINR 3", color="green", linestyle="-.")
+    if SINR4_log is not None:
+        plt.plot(np.rad2deg(theta_range), SINR4_log, label="SINR 4", color="black", linestyle=":")
+
+    # Ajouter les étiquettes et la légende
     plt.xlabel("Angle (θ en degrés)")
     plt.ylabel("SINR (dB)")
     plt.title("SINR en fonction de θ")
     plt.grid(True)
     plt.legend()
+    
+    # Afficher le graphique
     plt.show()
+
+    
+# Pour les questions 7 & 8 ####################################################
+
+
+def compute_w(params, C, a_theta_hat):
+    """
+    Arguments :
+        params 
+        C (array) : la même matrice de covariance que précédemment
+        a_theta_hat (array) : Vecteur directeur a(\hat{\theta_s}), estimé !
+
+    Sortie : wMVDR (array) : Le filtre MVDR
+    """
+    
+    C_inv = np.linalg.inv(C)     # Inversion de la matrice de covariance 
+    
+    # Et on calcule le wMVDR
+    numerator = np.dot(C_inv, a_theta_hat)
+    denominator = np.dot(np.conj(a_theta_hat).T, numerator)
+    wMVDR = numerator / denominator
+
+    return wMVDR
+
+
+
+
+
+
+
+
