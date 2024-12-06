@@ -60,7 +60,7 @@ def get_a_theta(angle, N, d, lambda_):
     k = 2 * np.pi / lambda_
     
     for n in range(2, N+1):
-        a_theta[n-1] = np.exp(-1j * k * d * (n-1) * np.sin(angle*np.pi/180) )
+        a_theta[n-1] = np.exp(-1j * k * d * (n-1) * np.sin(angle * np.pi/180))
 
     return a_theta
 
@@ -82,28 +82,29 @@ def get_R(Ps, theta_s, sigma, Pi, N, d, lambda_):
     """
     C = get_C(sigma, Pi, N, d, lambda_, theta_s)
     a_theta =  get_a_theta(theta_s, N, d, lambda_)
-    
-    R =  C + Ps * a_theta* (a_theta).conj().T
+
+    R =  C + Ps * np.outer(a_theta, (a_theta).conj().T)
     return R
 
 def get_C_hat(K, y_i, n_k):
     """
     On calcule une estimation de la matrice de covariance C 
     """
-    sum_ = 0
+    somme = 0
     for k in range(1, K):
-        sum_ += (y_i[k] + n_k[:, k]) @ (y_i[k] + n_k[:, k]).conj().T
-    C_hat = sum_ / K
+        somme += (y_i[k] + n_k[:, k]) @ (y_i[k] + n_k[:, k]).conj().T
+    C_hat = somme / K
     return C_hat
 
 def get_R_hat(K, y_k):
     """
     On calcule une estimation de la matrice de covariance R 
     """
-    sum_ = 0
+    somme = 0
     for k in range(1, K):
-        sum_ += (y_k[:, k]) @ (y_k[:, k]).conj().T
-    R_hat = sum_ / K
+        #somme += (y_k[:, k]) @ (y_k[:, k]).conj().T
+        somme += np.outer(y_k[:, k], y_k[:, k].conj())
+    R_hat = somme / K
     return R_hat
 
 def get_w_cbf(N, d, lambda_, angle):
@@ -134,6 +135,7 @@ def wMVDR(C, N, d, lambda_, theta_est):
     a_theta = get_a_theta(theta_est, N, d, lambda_)
     
     w_MVDR = np.linalg.inv(C) @  a_theta / (a_theta.conj().T @ np.linalg.inv(C) @ a_theta)
+
     return w_MVDR
 
 
@@ -215,3 +217,66 @@ def draw_SINR_all(SNR_in, N, d, lambda_, theta_s, sigma, Pi):
 
     # Affichage du graphique
     plt.show()
+    
+    
+def compute_y_k(params, S_k, y_i, n_k, k):
+    """
+    Calcule y_k à partir des signaux S_k, du signal d'interférence y_i et du bruit n_k.
+    """
+    a_theta_s = get_a_theta(params["theta_s"], params["N"], params["d"], params["lambda_"])
+
+    # Calcul de y_k en multipliant chaque colonne de S_k par a_theta_s (cela donne un résultat de forme (25, 10))
+    y_k = (np.dot(a_theta_s, S_k) + y_i + n_k[k, :])
+
+    return y_k
+
+
+
+def draw_SINR_mpdr_mvdr_hat(simulation, w_mpdr_hat, w_mvdr_hat):
+    """
+    Cette fonction trace le SINR pour les filtres MPDR et MVDR, ainsi que pour leurs versions modifiées
+ 
+    """
+    # Plage d'angles (de theta_s-20° à theta_s+20° avec un pas de 0.1°)
+    theta_array = np.linspace(simulation.theta_s - 20, simulation.theta_s + 20, 120)
+
+    # Initialisation des tableaux de SINR pour chaque configuration
+    SINR_mvdr = np.zeros(np.shape(theta_array)[0])
+    SINR_mpdr = np.zeros(np.shape(theta_array)[0])
+    SINR_mvdr_hat = np.zeros(np.shape(theta_array)[0])
+    SINR_mpdr_hat = np.zeros(np.shape(theta_array)[0])
+
+    # Calcul des SINR pour chaque angle
+    for i, angle in enumerate(theta_array):
+        # SINR pour MVDR avec estimation de la covariance
+        SINR_mvdr[i] = 10 * np.log10(simulation.get_SINR(simulation.MVDR(simulation.theta_s + 2), angle))
+        
+        # SINR pour MPDR avec estimation de la covariance
+        SINR_mpdr[i] = 10 * np.log10(simulation.get_SINR(simulation.MPDR(simulation.theta_s + 2), angle))
+        
+        # SINR pour MVDR avec \( \hat{C} \)
+        SINR_mvdr_hat[i] = 10 * np.log10(simulation.get_SINR(w_mvdr_hat, angle))
+        
+        # SINR pour MPDR avec \( \hat{R} \)
+        SINR_mpdr_hat[i] = 10 * np.log10(simulation.get_SINR(w_mpdr_hat, angle))
+
+    # Tracé des courbes
+    plt.figure(figsize=(10, 6))
+    plt.plot(theta_array, SINR_mpdr_hat, "*b", label="MPDR avec \( \hat{R} \)", markersize=6)
+    plt.plot(theta_array, SINR_mvdr_hat, "*r", label="MVDR avec \( \hat{C} \)", markersize=6)
+    plt.plot(theta_array, SINR_mvdr, "-m", label="MVDR sans estimation")
+    plt.plot(theta_array, SINR_mpdr, "-c", label="MPDR sans estimation")
+
+    # Ajouter le titre, les labels et la légende
+    plt.title("Comparaison des SINR pour MPDR et MVDR avec et sans estimation")
+    plt.xlabel("Angle (θ en degrés)")
+    plt.ylabel("SINR (dB)")
+    plt.legend()  # Affiche la légende
+    plt.grid(True)  # Affiche la grille pour meilleure lisibilité
+
+    # Affichage du graphique
+    plt.show()
+
+
+
+

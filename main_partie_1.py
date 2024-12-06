@@ -26,6 +26,8 @@ sigma = params["sigma"]
 K = params["K"]
 SNR_in = params["SNR_in"]
 y_i = params["y_i"]
+S_k = params["S_k"]
+n_k = params["n_k"]
 
 #%% QUESTION 3 VERIFICATION  SNR THEORIQUE ET NUMERIQUE
 
@@ -64,11 +66,37 @@ R = lib.get_R(Ps, theta_s, sigma, Pi, N, d, lambda_)
 w_mvdr = lib.wMVDR(C, N, d, lambda_, angle_estime)
 w_mpdr = lib.wMPDR(R, N, d, lambda_, angle_estime)
 
+
 # Calcul et affichage du SINR pour MPDR et MVDR
 SINR_mvdr = lib.get_SINR(SNR_in, w_mvdr, C, N, d, lambda_, theta_s)  # SINR pour MVDR
 SINR_mpdr = lib.get_SINR(SNR_in, w_mpdr, C, N, d, lambda_, theta_s)  # SINR pour MPDR
 
-print(f"SINR pour MVDR (avec erreur d'angle de 2°) : {(SINR_mvdr)} dB")
-print(f"SINR pour MPDR (avec erreur d'angle de 2°) : {(SINR_mpdr)} dB")
+print(f"SINR pour MVDR (avec erreur d'angle de 2°) : {10*np.log10(SINR_mvdr)} dB")
+print(f"SINR pour MPDR (avec erreur d'angle de 2°) : {10*np.log10(SINR_mpdr)} dB")
 
 lib.draw_SINR_all(SNR_in, N, d, lambda_, theta_s, sigma, Pi)
+
+#%% Question 10
+
+S_k = params["S_k"]  # Signal source
+y_i = params["y_i"]  # Signal d'interférence
+n_k = params["n_k"]  # Bruit
+k=1
+y_k = lib.compute_y_k(params, S_k, y_i, n_k, k)
+
+print("y_k :", y_k)
+
+#%% Question 11
+
+k = 0  # Choisir un indice valide
+y_k = lib.compute_y_k(params, params["S_k"], params["y_i"], params["n_k"], k)
+
+# Vérification de la taille de y_k
+print(f"Dimensions de y_k: {y_k.shape}")  # Cela devrait être (N, K)
+
+# Appel à get_R_hat
+R_hat = lib.get_R_hat(params["K"], y_k)
+print(f"Dimensions de R_hat: {R_hat.shape}")
+
+
+
