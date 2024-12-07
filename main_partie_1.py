@@ -28,13 +28,14 @@ SNR_in = params["SNR_in"]
 y_i = params["y_i"]
 S_k = params["S_k"]
 n_k = params["n_k"]
+i_k = params["i_k"]
 
 #%% QUESTION 3 VERIFICATION  SNR THEORIQUE ET NUMERIQUE
 
-# Calculer wCBF avec la fonction get_w_cbf
+# On calcule le wCBF
 w_cbf = lib.get_w_cbf(N, d, lambda_, theta_s)
 
-# Vérification du SNR après filtrage avec wCBF
+# Et on vérifie le SNR après filtrage avec wCBF
 SNR_out_cbf = lib.get_SNR_out(SNR_in, w_cbf, N, d, lambda_, theta_s)
 
 print(f"SNR_in multiplié par N : {SNR_in*N}")
@@ -42,39 +43,31 @@ print(f"SNR après filtrage avec wCBF : {SNR_out_cbf}")
 
 #%% QUESTION 4 PLOT SINR
 
-# Calculer la matrice de covariance C pour l'interférence
-C = lib.get_C(sigma, Pi, N, d, lambda_, theta_i)
+C = lib.get_C(sigma, Pi, N, d, lambda_, theta_i) # On calcule la matrice de covariance
 
-# Calculer le poids optimal adaptatif w_opt
-w_opt = lib.get_w_opt(C, N, d, lambda_, theta_s)
+w_opt = lib.get_w_opt(C, N, d, lambda_, theta_s) # Et puis le poids optimal w_opt
 
-# Calculer et tracer le SINR avec w_opt
+# On calcule et on tracer le SINR avec w_opt grace à notre fonction !
 lib.draw_SINR(SNR_in, w_opt, N, d, lambda_, theta_s)  
 
 #%% QUESTION 7
 
-# Erreur d'angle estimée (2 degrés)
 angle_estime = theta_s + 2  # L'angle estimé est de 2° plus l'angle de la source
 
-# Calcul de la matrice de covariance C (pour MVDR)
-C = lib.get_C(sigma, Pi, N, d, lambda_, theta_i)
+C = lib.get_C(sigma, Pi, N, d, lambda_, theta_i)      # Calcul de la matrice de C (pour MVDR)
+R = lib.get_R(Ps, theta_s, sigma, Pi, N, d, lambda_)  # Calcul de la matrice de R (pour MPDR)
 
-# Calcul de la matrice de covariance R (pour MPDR)
-R = lib.get_R(Ps, theta_s, sigma, Pi, N, d, lambda_)
-
-# Calcul des poids MPDR et MVDR
+# On calcule les poids MPDR et MVDR
 w_mvdr = lib.wMVDR(C, N, d, lambda_, angle_estime)
 w_mpdr = lib.wMPDR(R, N, d, lambda_, angle_estime)
 
-
-# Calcul et affichage du SINR pour MPDR et MVDR
 SINR_mvdr = lib.get_SINR(SNR_in, w_mvdr, C, N, d, lambda_, theta_s)  # SINR pour MVDR
 SINR_mpdr = lib.get_SINR(SNR_in, w_mpdr, C, N, d, lambda_, theta_s)  # SINR pour MPDR
 
 print(f"SINR pour MVDR (avec erreur d'angle de 2°) : {10*np.log10(SINR_mvdr)} dB")
 print(f"SINR pour MPDR (avec erreur d'angle de 2°) : {10*np.log10(SINR_mpdr)} dB")
 
-lib.draw_SINR_all(SNR_in, N, d, lambda_, theta_s, sigma, Pi)
+lib.draw_SINR_all(SNR_in, N, d, lambda_, theta_s, sigma, Pi) #  On trace tout grâce à notre super fonction de tracage
 
 #%% Question 10
 
@@ -82,21 +75,30 @@ S_k = params["S_k"]  # Signal source
 y_i = params["y_i"]  # Signal d'interférence
 n_k = params["n_k"]  # Bruit
 k=1
-y_k = lib.compute_y_k(params, S_k, y_i, n_k, k)
+y_k = lib.compute_y_k(params, S_k, y_i, n_k, k)  # On calcule le signal y_k
 
-print("y_k :", y_k)
+print("y_k :", y_k) # Print pour valider
 
 #%% Question 11
 
-k = 0  # Choisir un indice valide
+angle_estime = theta_s + 2  # L'angle estimé est de 2° plus l'angle de la source
+k = 0  
 y_k = lib.compute_y_k(params, params["S_k"], params["y_i"], params["n_k"], k)
 
-# Vérification de la taille de y_k
-print(f"Dimensions de y_k: {y_k.shape}")  # Cela devrait être (N, K)
+# On prend R_hat et C_hat pour nos prochains calculs et pour les vérifier (sur spyder on peut voir nos variables)
+R_hat = lib.get_R_hat(K, y_k)
+C_hat = lib.get_C_hat(K, y_i, n_k)
+C = lib.get_C(sigma, Pi, N, d, lambda_, theta_i)
 
-# Appel à get_R_hat
-R_hat = lib.get_R_hat(params["K"], y_k)
-print(f"Dimensions de R_hat: {R_hat.shape}")
+# On calcule les poids MPDR_hat et MVDR_hat
+w_mvdr_hat = lib.wMVDR(C_hat, N, d, lambda_, angle_estime)
+w_mpdr_hat = lib.wMPDR(R_hat, N, d, lambda_, angle_estime)
 
+# Les SINR pour MPDR_hat et MVDR_hat
+SINR_mvdr_hat = lib.get_SINR(SNR_in, w_mvdr_hat, C_hat, N, d, lambda_, theta_s)  # SINR pour MVDR
+SINR_mpdr_hat = lib.get_SINR(SNR_in, w_mpdr_hat, C_hat, N, d, lambda_, theta_s)  # SINR pour MPDR
 
+print(f"SINR pour MVDR_hat (avec erreur d'angle de 2°) : {10*np.log10(SINR_mvdr_hat)} dB")
+print(f"SINR pour MPDR_hat (avec erreur d'angle de 2°) : {10*np.log10(SINR_mpdr_hat)} dB")
 
+lib.draw_SINR_hat_all(SNR_in, N, d, lambda_, theta_s, sigma, Pi, C_hat, R_hat)
